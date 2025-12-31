@@ -1,0 +1,893 @@
+﻿// www_index.html - PÃ¡gina web del SCADA
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCADA - Sistema de Control DepÃ³sito de Agua</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #17a2b8;
+            --light: #ecf0f1;
+            --dark: #34495e;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-title {
+            color: var(--primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .card-icon {
+            font-size: 1.5rem;
+        }
+        
+        /* Grid positions */
+        .header { grid-column: 1 / -1; }
+        .pressure-grid { grid-column: span 6; }
+        .motors { grid-column: span 6; }
+        .digital-inputs { grid-column: span 4; }
+        .power { grid-column: span 4; }
+        .water-level { grid-column: span 4; }
+        .environment { grid-column: span 4; }
+        .alarms { grid-column: span 8; }
+        .logs { grid-column: span 6; }
+        .controls { grid-column: span 6; }
+        .footer { grid-column: 1 / -1; }
+        
+        /* Status indicators */
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 2px;
+        }
+        
+        .status-on { background: var(--success); color: white; }
+        .status-off { background: var(--danger); color: white; }
+        .status-auto { background: var(--info); color: white; }
+        .status-manual { background: var(--warning); color: white; }
+        .status-fault { background: var(--danger); color: white; }
+        
+        /* Gauges */
+        .gauge {
+            width: 100%;
+            height: 200px;
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        .gauge-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .gauge-label {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--dark);
+            font-weight: 500;
+        }
+        
+        /* Motor controls */
+        .motor-control {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+        }
+        
+        .control-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        
+        .btn-start { background: var(--success); color: white; }
+        .btn-stop { background: var(--danger); color: white; }
+        .btn-reset { background: var(--warning); color: white; }
+        
+        .control-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+        
+        .control-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .data-table th {
+            background: var(--light);
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--light);
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Real-time updates */
+        .update-time {
+            font-size: 0.8rem;
+            color: #666;
+            text-align: right;
+            margin-top: 10px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: repeat(8, 1fr);
+            }
+            .pressure-grid { grid-column: span 8; }
+            .motors { grid-column: span 8; }
+            .digital-inputs { grid-column: span 4; }
+            .power { grid-column: span 4; }
+            .water-level { grid-column: span 8; }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .card { grid-column: span 1; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card header">
+            <h1>ðŸ­ SCADA - Sistema de Control DepÃ³sito de Agua</h1>
+            <div class="update-time" id="lastUpdate">Ãšltima actualizaciÃ³n: --:--:--</div>
+            <div style="display: flex; gap: 20px; margin-top: 10px;">
+                <div class="status-badge" id="statusSystem">Sistema: OK</div>
+                <div class="status-badge" id="statusNetwork">Red: Conectado</div>
+                <div class="status-badge" id="statusEmergency">Paro Emergencia: NO</div>
+                <div class="status-badge" id="statusMode">Modo: AUTO</div>
+            </div>
+        </div>
+        
+        <!-- Sensores de PresiÃ³n -->
+        <div class="card pressure-grid">
+            <div class="card-header">
+                <h2 class="card-title">ðŸ”¶ Sensores de PresiÃ³n (4-20mA)</h2>
+                <span class="card-icon">ðŸ“Š</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                <div class="gauge-container" id="pressureGauge1">
+                    <div class="gauge">
+                        <canvas id="gauge1"></canvas>
+                        <div class="gauge-value" id="pressureValue1">0.0</div>
+                    </div>
+                    <div class="gauge-label">PresiÃ³n 1 (bar)</div>
+                </div>
+                <!-- Repetir para los 5 sensores de presiÃ³n -->
+            </div>
+        </div>
+        
+        <!-- Motores -->
+        <div class="card motors">
+            <div class="card-header">
+                <h2 class="card-title">âš™ï¸ Control de Motores</h2>
+                <span class="card-icon">ðŸ”§</span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Motor 1 -->
+                <div class="motor-panel">
+                    <h3>Motor 1</h3>
+                    <div class="motor-status">
+                        <div>Estado: <span id="motor1State" class="status-badge status-off">OFF</span></div>
+                        <div>Velocidad: <span id="motor1Speed">0</span>%</div>
+                        <div>Modo: <span id="motor1Mode" class="status-badge status-manual">MANUAL</span></div>
+                        <div>Horas: <span id="motor1Hours">0</span> h</div>
+                    </div>
+                    <div class="motor-control">
+                        <button class="control-btn btn-start" onclick="controlMotor(1, 'start')">START</button>
+                        <button class="control-btn btn-stop" onclick="controlMotor(1, 'stop')">STOP</button>
+                        <button class="control-btn btn-reset" onclick="resetMotor(1)">RESET</button>
+                    </div>
+                </div>
+                
+                <!-- Motor 2 -->
+                <div class="motor-panel">
+                    <h3>Motor 2</h3>
+                    <div class="motor-status">
+                        <div>Estado: <span id="motor2State" class="status-badge status-off">OFF</span></div>
+                        <div>Velocidad: <span id="motor2Speed">0</span>%</div>
+                        <div>Modo: <span id="motor2Mode" class="status-badge status-manual">MANUAL</span></div>
+                        <div>Horas: <span id="motor2Hours">0</span> h</div>
+                    </div>
+                    <div class="motor-control">
+                        <button class="control-btn btn-start" onclick="controlMotor(2, 'start')">START</button>
+                        <button class="control-btn btn-stop" onclick="controlMotor(2, 'stop')">STOP</button>
+                        <button class="control-btn btn-reset" onclick="resetMotor(2)">RESET</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <h4>Alternancia AutomÃ¡tica</h4>
+                <div>PrÃ³ximo cambio: <span id="nextSwitch">--:--</span></div>
+                <div>Motor activo: <span id="activeMotor">NINGUNO</span></div>
+                <label>
+                    <input type="checkbox" id="autoAlternation" onchange="toggleAlternation()">
+                    Habilitar alternancia automÃ¡tica
+                </label>
+            </div>
+        </div>
+        
+        <!-- Entradas Digitales -->
+        <div class="card digital-inputs">
+            <div class="card-header">
+                <h2 class="card-title">ðŸŽ® Entradas Digitales</h2>
+                <span class="card-icon">ðŸ”„</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Entrada</th>
+                        <th>Estado</th>
+                        <th>DescripciÃ³n</th>
+                    </tr>
+                </thead>
+                <tbody id="digitalInputsTable">
+                    <!-- Se llena con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Medidor de Potencia -->
+        <div class="card power">
+            <div class="card-header">
+                <h2 class="card-title">âš¡ Medidor de Potencia</h2>
+                <span class="card-icon">ðŸ“ˆ</span>
+            </div>
+            <div id="powerChart" style="height: 250px;"></div>
+            <table class="data-table">
+                <tr><td>TensiÃ³n L1</td><td id="voltageL1">0.0 V</td></tr>
+                <tr><td>TensiÃ³n L2</td><td id="voltageL2">0.0 V</td></tr>
+                <tr><td>TensiÃ³n L3</td><td id="voltageL3">0.0 V</td></tr>
+                <tr><td>Corriente L1</td><td id="currentL1">0.0 A</td></tr>
+                <tr><td>Corriente L2</td><td id="currentL2">0.0 A</td></tr>
+                <tr><td>Corriente L3</td><td id="currentL3">0.0 A</td></tr>
+                <tr><td>Potencia Activa</td><td id="activePower">0.0 kW</td></tr>
+                <tr><td>Factor de Potencia</td><td id="powerFactor">0.00</td></tr>
+            </table>
+        </div>
+        
+        <!-- Nivel de Agua -->
+        <div class="card water-level">
+            <div class="card-header">
+                <h2 class="card-title">ðŸ’§ Nivel del DepÃ³sito</h2>
+                <span class="card-icon">ðŸŒŠ</span>
+            </div>
+            <div id="levelGauge" style="height: 200px;"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="font-size: 2.5rem; font-weight: bold;" id="waterLevel">0%</div>
+                <div style="color: #666; margin-top: 10px;">
+                    <span id="levelStatus">Normal</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Temperatura y Humedad -->
+        <div class="card environment">
+            <div class="card-header">
+                <h2 class="card-title">ðŸŒ¡ï¸ Ambiente</h2>
+                <span class="card-icon">ðŸŒ¤ï¸</span>
+            </div>
+            <div style="display: flex; justify-content: space-around; align-items: center; height: 150px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #e74c3c;">ðŸ”¥</div>
+                    <div style="font-size: 2rem; font-weight: bold;" id="temperature">0.0Â°C</div>
+                    <div style="color: #666;">Temperatura</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #3498db;">ðŸ’§</div>
+                    <div style="font-size: 2rem; font-weight: bold;" id="humidity">0.0%</div>
+                    <div style="color: #666;">Humedad</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alarmas -->
+        <div class="card alarms">
+            <div class="card-header">
+                <h2 class="card-title">ðŸš¨ Alarmas Activas</h2>
+                <span class="card-icon">âš ï¸</span>
+            </div>
+            <div id="alarmsList" style="max-height: 300px; overflow-y: auto;">
+                <!-- Lista de alarmas -->
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="control-btn btn-reset" onclick="resetAllAlarms()">Resetear Todas las Alarmas</button>
+            </div>
+        </div>
+        
+        <!-- Controles Generales -->
+        <div class="card controls">
+            <div class="card-header">
+                <h2 class="card-title">ðŸŽ›ï¸ Controles Generales</h2>
+                <span class="card-icon">âš™ï¸</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                <button class="control-btn btn-start" onclick="generalStart()">MARCHA GENERAL</button>
+                <button class="control-btn btn-stop" onclick="generalStop()">PARO GENERAL</button>
+                <button class="control-btn" style="background: #9b59b6; color: white;" 
+                        onclick="toggleMode(1)">MOTOR 1 AUTO/MAN</button>
+                <button class="control-btn" style="background: #9b59b6; color: white;" 
+                        onclick="toggleMode(2)">MOTOR 2 AUTO/MAN</button>
+                <button class="control-btn" style="background: #1abc9c; color: white;" 
+                        onclick="toggleControlMode()">CONTACTOR/VARIADOR</button>
+                <button class="control-btn btn-reset" onclick="emergencyReset()">RESET EMERGENCIA</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                <h4>ConfiguraciÃ³n del Sistema</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Intervalo de actualizaciÃ³n:</label>
+                        <select id="updateInterval" onchange="changeUpdateInterval()">
+                            <option value="1000">1 segundo</option>
+                            <option value="5000" selected>5 segundos</option>
+                            <option value="10000">10 segundos</option>
+                            <option value="30000">30 segundos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Modo de datos:</label>
+                        <select id="dataMode" onchange="changeDataMode()">
+                            <option value="realtime">Tiempo real</option>
+                            <option value="compact">Compacto</option>
+                            <option value="full">Completo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="card footer">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>SCADA v1.0</strong> | Dispositivo: <span id="deviceId">ESP32_SCADA</span> | 
+                    Uptime: <span id="systemUptime">0 dÃ­as</span>
+                </div>
+                <div>
+                    <span id="connectionStatus">ðŸŸ¢ Conectado</span> | 
+                    <span id="dataRate">0 B/s</span> | 
+                    <span id="freeHeap">0 KB libre</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let ws = null;
+        let lastUpdate = 0;
+        let dataRate = 0;
+        let updateInterval = 5000;
+        let dataMode = 'realtime';
+        
+        // InicializaciÃ³n
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            loadInitialData();
+            setInterval(updateDashboard, updateInterval);
+            setInterval(updateSystemInfo, 1000);
+        });
+        
+        // WebSocket para datos en tiempo real
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = ${protocol}///ws;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                console.log('WebSocket conectado');
+                document.getElementById('connectionStatus').innerHTML = 'ðŸŸ¢ WebSocket';
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                processRealtimeData(data);
+                updateDataRate(event.data.length);
+            };
+            
+            ws.onclose = function() {
+                console.log('WebSocket desconectado, reconectando...');
+                document.getElementById('connectionStatus').innerHTML = 'ðŸ”´ Desconectado';
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+        
+        // Cargar datos iniciales via HTTP
+        function loadInitialData() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateFullData(data);
+                })
+                .catch(error => {
+                    console.error('Error cargando datos:', error);
+                });
+        }
+        
+        // Actualizar dashboard completo
+        function updateDashboard() {
+            fetch(/api/status?mode=)
+                .then(response => response.json())
+                .then(data => {
+                    updateFullData(data);
+                    document.getElementById('lastUpdate').textContent = 
+                        Ãšltima actualizaciÃ³n: ;
+                })
+                .catch(error => {
+                    console.error('Error actualizando dashboard:', error);
+                });
+        }
+        
+        // Procesar datos en tiempo real
+        function processRealtimeData(data) {
+            // Sensores de presiÃ³n
+            if (data.s && data.s.length >= 5) {
+                for (let i = 0; i < 5; i++) {
+                    if (data.s[i] !== null) {
+                        updatePressureGauge(i + 1, data.s[i]);
+                    }
+                }
+            }
+            
+            // Nivel de agua
+            if (data.wl !== undefined) {
+                updateWaterLevel(data.wl);
+            }
+            
+            // Motores
+            if (data.m1 !== undefined) {
+                updateMotorStatus(1, data.m1, data.m1s);
+            }
+            if (data.m2 !== undefined) {
+                updateMotorStatus(2, data.m2, data.m2s);
+            }
+            
+            // Alarmas
+            if (data.a && data.a.length > 0) {
+                updateAlarms(data.a);
+            }
+            
+            lastUpdate = Date.now();
+        }
+        
+        // Actualizar datos completos
+        function updateFullData(data) {
+            // Sensores
+            if (data.sensors && data.sensors.pressure) {
+                data.sensors.pressure.forEach((sensor, index) => {
+                    updatePressureGauge(index + 1, sensor.value);
+                });
+            }
+            
+            // Nivel de agua
+            if (data.sensors && data.sensors.water_level) {
+                updateWaterLevel(data.sensors.water_level.value);
+            }
+            
+            // Potencia
+            if (data.sensors && data.sensors.power) {
+                updatePowerData(data.sensors.power);
+            }
+            
+            // Ambiente
+            if (data.sensors && data.sensors.environment) {
+                updateEnvironmentData(data.sensors.environment);
+            }
+            
+            // Motores
+            if (data.motors) {
+                updateMotorData(data.motors);
+            }
+            
+            // Entradas digitales
+            if (data.digital_inputs) {
+                updateDigitalInputs(data.digital_inputs);
+            }
+            
+            // Sistema
+            if (data.system) {
+                updateSystemData(data.system);
+            }
+            
+            // Alarmas
+            if (data.alarms) {
+                updateAlarmsList(data.alarms.active);
+            }
+        }
+        
+        // Funciones especÃ­ficas de actualizaciÃ³n
+        function updatePressureGauge(sensorNum, value) {
+            const elem = document.getElementById(pressureValue);
+            if (elem) {
+                elem.textContent = value.toFixed(1);
+                
+                // Cambiar color segÃºn valor
+                let color = '#27ae60'; // Verde
+                if (value > 8.0) color = '#e74c3c'; // Rojo
+                else if (value > 6.0) color = '#f39c12'; // Naranja
+                
+                elem.style.color = color;
+            }
+        }
+        
+        function updateWaterLevel(level) {
+            const elem = document.getElementById('waterLevel');
+            if (elem) {
+                elem.textContent = ${level.toFixed(1)}%;
+                
+                const statusElem = document.getElementById('levelStatus');
+                if (level < 20) {
+                    elem.style.color = '#e74c3c';
+                    statusElem.textContent = 'NIVEL BAJO';
+                    statusElem.style.color = '#e74c3c';
+                    statusElem.style.fontWeight = 'bold';
+                } else if (level > 80) {
+                    elem.style.color = '#f39c12';
+                    statusElem.textContent = 'NIVEL ALTO';
+                    statusElem.style.color = '#f39c12';
+                    statusElem.style.fontWeight = 'bold';
+                } else {
+                    elem.style.color = '#27ae60';
+                    statusElem.textContent = 'Normal';
+                    statusElem.style.color = '#27ae60';
+                    statusElem.style.fontWeight = 'normal';
+                }
+            }
+        }
+        
+        function updateMotorData(motors) {
+            // Motor 1
+            if (motors.motor_1) {
+                updateMotorStatus(1, 
+                    motors.motor_1.state, 
+                    motors.motor_1.speed_percent,
+                    motors.motor_1.running_hours,
+                    motors.motor_1.operation_mode);
+            }
+            
+            // Motor 2
+            if (motors.motor_2) {
+                updateMotorStatus(2,
+                    motors.motor_2.state,
+                    motors.motor_2.speed_percent,
+                    motors.motor_2.running_hours,
+                    motors.motor_2.operation_mode);
+            }
+        }
+        
+        function updateMotorStatus(motorNum, state, speed, hours, mode) {
+            // Actualizar estado
+            const stateElem = document.getElementById(motorState);
+            if (stateElem) {
+                stateElem.textContent = state;
+                stateElem.className = 'status-badge ';
+                
+                if (state === 'RUNNING') stateElem.classList.add('status-on');
+                else if (state === 'FAULT') stateElem.classList.add('status-fault');
+                else stateElem.classList.add('status-off');
+            }
+            
+            // Actualizar velocidad
+            const speedElem = document.getElementById(motorSpeed);
+            if (speedElem && speed !== undefined) {
+                speedElem.textContent = speed.toFixed(0);
+            }
+            
+            // Actualizar horas
+            const hoursElem = document.getElementById(motorHours);
+            if (hoursElem && hours !== undefined) {
+                hoursElem.textContent = hours.toFixed(1);
+            }
+            
+            // Actualizar modo
+            const modeElem = document.getElementById(motorMode);
+            if (modeElem && mode !== undefined) {
+                modeElem.textContent = mode;
+                modeElem.className = 'status-badge ';
+                modeElem.classList.add(mode === 'AUTO' ? 'status-auto' : 'status-manual');
+            }
+        }
+        
+        function updateDigitalInputs(inputs) {
+            const table = document.getElementById('digitalInputsTable');
+            if (!table) return;
+            
+            table.innerHTML = '';
+            
+            // Alarmas
+            addDigitalRow(table, 'Alarma Motor 1', inputs.alarms.motor_1);
+            addDigitalRow(table, 'Alarma Motor 2', inputs.alarms.motor_2);
+            
+            // Funcionamiento
+            addDigitalRow(table, 'Func. M1 Auto', inputs.operation.motor_1_auto);
+            addDigitalRow(table, 'Func. M1 Manual', inputs.operation.motor_1_manual);
+            addDigitalRow(table, 'Func. M2 Auto', inputs.operation.motor_2_auto);
+            addDigitalRow(table, 'Func. M2 Manual', inputs.operation.motor_2_manual);
+            
+            // Selectores
+            addDigitalRow(table, 'Sel. M1 Auto/Man', inputs.selectors.motor_1_auto_man);
+            addDigitalRow(table, 'Sel. M2 Auto/Man', inputs.selectors.motor_2_auto_man);
+            addDigitalRow(table, 'Sel. Cont/Variador', inputs.selectors.contactor_vfd);
+            
+            // Control
+            addDigitalRow(table, 'Paro Emergencia', inputs.control.emergency_stop);
+            addDigitalRow(table, 'Reset Alarmas', inputs.control.reset_alarms);
+            addDigitalRow(table, 'Marcha General', inputs.control.general_start);
+            addDigitalRow(table, 'Paro General', inputs.control.general_stop);
+        }
+        
+        function addDigitalRow(table, name, data) {
+            const row = table.insertRow();
+            
+            // Nombre
+            const cellName = row.insertCell(0);
+            cellName.textContent = name;
+            
+            // Estado
+            const cellState = row.insertCell(1);
+            const state = data.state ? 'ON' : 'OFF';
+            const active = data.active !== undefined ? data.active : data.state;
+            
+            cellState.innerHTML = <span class="status-badge "></span>;
+            
+            // DescripciÃ³n
+            const cellDesc = row.insertCell(2);
+            cellDesc.textContent = data.description || '';
+            
+            // Color de fondo para alarmas activas
+            if (data.active === true) {
+                row.style.backgroundColor = '#ffe6e6';
+            } else if (data.active === false) {
+                row.style.backgroundColor = '#e6ffe6';
+            }
+        }
+        
+        // Funciones de control
+        function controlMotor(motorNum, action) {
+            fetch(/api/control/motor/, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                showNotification(Motor : , 'success');
+            })
+            .catch(error => {
+                showNotification(Error: , 'error');
+            });
+        }
+        
+        function generalStart() {
+            fetch('/api/control/general/start', { method: 'POST' })
+                .then(() => showNotification('Marcha general iniciada', 'success'));
+        }
+        
+        function generalStop() {
+            fetch('/api/control/general/stop', { method: 'POST' })
+                .then(() => showNotification('Paro general ejecutado', 'success'));
+        }
+        
+        function toggleMode(motorNum) {
+            fetch(/api/control/motor/toggle_mode, { method: 'POST' })
+                .then(() => showNotification(Modo motor  cambiado, 'success'));
+        }
+        
+        function toggleControlMode() {
+            fetch('/api/control/toggle_control_mode', { method: 'POST' })
+                .then(() => showNotification('Modo control cambiado', 'success'));
+        }
+        
+        function resetAllAlarms() {
+            fetch('/api/control/reset_all_alarms', { method: 'POST' })
+                .then(() => showNotification('Alarmas reseteadas', 'success'));
+        }
+        
+        function emergencyReset() {
+            if (confirm('Â¿EstÃ¡ seguro de resetear emergencia? Esto activarÃ¡ los motores si estÃ¡n en modo auto.')) {
+                fetch('/api/control/emergency_reset', { method: 'POST' })
+                    .then(() => showNotification('Reset emergencia ejecutado', 'success'));
+            }
+        }
+        
+        function toggleAlternation() {
+            const enabled = document.getElementById('autoAlternation').checked;
+            fetch('/api/control/alternation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: enabled })
+            })
+            .then(() => showNotification(Alternancia , 'success'));
+        }
+        
+        function changeUpdateInterval() {
+            updateInterval = parseInt(document.getElementById('updateInterval').value);
+            showNotification(Intervalo actualizado a  segundos, 'info');
+        }
+        
+        function changeDataMode() {
+            dataMode = document.getElementById('dataMode').value;
+            showNotification(Modo datos cambiado a , 'info');
+        }
+        
+        // Utilidades
+        function updateDataRate(bytes) {
+            const now = Date.now();
+            const elapsed = (now - lastUpdate) / 1000;
+            if (elapsed > 0) {
+                dataRate = bytes / elapsed;
+                document.getElementById('dataRate').textContent = 
+                    ${(dataRate / 1024).toFixed(1)} KB/s;
+            }
+            lastUpdate = now;
+        }
+        
+        function updateSystemInfo() {
+            // Actualizar uptime cada segundo
+            const uptimeElem = document.getElementById('systemUptime');
+            if (uptimeElem) {
+                const seconds = parseInt(uptimeElem.dataset.seconds || 0) + 1;
+                uptimeElem.dataset.seconds = seconds;
+                
+                const days = Math.floor(seconds / 86400);
+                const hours = Math.floor((seconds % 86400) / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                
+                uptimeElem.textContent = ${days}d ::;
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Implementar notificaciÃ³n toast
+            console.log(${type.toUpperCase()}: );
+            
+            // Ejemplo simple con alert
+            if (type === 'error') {
+                alert(ERROR: );
+            }
+        }
+        
+        // Inicializar grÃ¡ficos
+        function initCharts() {
+            // Inicializar grÃ¡fico de potencia
+            const powerChart = new ApexCharts(document.querySelector("#powerChart"), {
+                series: [{
+                    name: 'Potencia',
+                    data: []
+                }],
+                chart: {
+                    type: 'line',
+                    height: 250,
+                    animations: {
+                        enabled: true,
+                        speed: 800
+                    }
+                },
+                stroke: {
+                    curve: 'smooth'
+                },
+                colors: ['#3498db']
+            });
+            powerChart.render();
+            
+            // Inicializar medidor de nivel
+            const levelChart = new ApexCharts(document.querySelector("#levelGauge"), {
+                series: [0],
+                chart: {
+                    type: 'radialBar',
+                    height: 200
+                },
+                plotOptions: {
+                    radialBar: {
+                        startAngle: -90,
+                        endAngle: 90,
+                        hollow: {
+                            size: '70%'
+                        },
+                        dataLabels: {
+                            name: {
+                                show: false
+                            },
+                            value: {
+                                fontSize: '30px',
+                                fontWeight: 'bold',
+                                offsetY: 10,
+                                color: '#2c3e50'
+                            }
+                        }
+                    }
+                },
+                colors: ['#3498db']
+            });
+            levelChart.render();
+        }
+    </script>
+</body>
+</html>
